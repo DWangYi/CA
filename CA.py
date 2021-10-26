@@ -68,7 +68,8 @@ DMtx = np.zeros((n,times))
 plt.figure(figsize=(5, 4), facecolor='w')
 #开始仿真
 for t in range(times):  # 遍历每个时刻
-    plt.scatter([t] * n, x, s=1, c='k', alpha=0.05)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
+    #plt.scatter(x, [t] * n, s=1, c='k', alpha=0.05)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
+    #plt.plot(x, [t] * n, c='k', alpha=0.05)
     for i in range(n): # 遍历每辆车
         mat = matlist[i]  # 确定车辆类型
         # 计算当前车与前车的距离以及安全距离，注意是环形车道，i的前车为i-1
@@ -90,9 +91,9 @@ for t in range(times):  # 遍历每个时刻
                 v1[i] = max(v[i] - SDM[i][t]*De, 0)
             elif (np.random.random()>p) & (t%RT_HV == 0):
                 SDM[i][t] = 0
-                v1[i] = max(v[i] - SDM[i][t]*De, 0)
+                pass #v1[i] = max(v[i] - SDM[i][t]*De, 0)
             else:
-                v1[i] = v1[i]
+                pass #v1[i] = v1[i]
         elif mat[1] == 1:   #车辆为 AV
             if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                v1[i] = min(v[i]+Ac, ltv, d)
@@ -107,18 +108,18 @@ for t in range(times):  # 遍历每个时刻
         DMtx[i][t] = d
 
 
-    Xlist = np.vstack((Xlist, (x + v1)%(path-1)))
+    Xlist = np.vstack((Xlist, (x + v)%(path-1)))
     Vlist = np.vstack((Vlist, v1))
-    x = x + v1     #更新位置
+    x = (x + v1)%(path-1)     #更新位置
     v = v1         #更新速度
 
-'''
+
 # 画图展示
+plt.plot(range(20), Xlist[0,:], c='k', alpha=0.05)
 plt.xlim(0, path)
 plt.ylim(0, times)
 plt.xlabel(u'车辆位置', fontproperties=myfont)
 plt.ylabel(u'模拟时间', fontproperties=myfont)
-plt.title(u'交通模拟(车道长度%d,车辆数%d,初速度%s,减速概率%s)' % (path, n, v0, p), fontproperties=myfont)
+plt.title(u'交通模拟(车道长度%d,车辆数%d,初速度%s,减速概率%s)' % (path/100, n, 200, p), fontproperties=myfont)
 # plt.tight_layout(pad=2)
 plt.show()
-'''
