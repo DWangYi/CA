@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib.font_manager import *
 import matplotlib.pyplot as plt
+import matplotlib
 import random
 from scipy import interpolate
 
@@ -13,12 +14,12 @@ myfont = FontProperties(fname='ns.ttc')
 
 #参数设置说明
 path = 40000.0   # 元胞总数
-n =35         # 车辆数目
+n = 10         # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2         # 随机减速概率
 times = 2000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 1       # 网联车渗透率
+PER = 0.0       # 网联车渗透率
 RT_HV = 2      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
@@ -57,8 +58,9 @@ for i in range(n):
 x = np.round(np.linspace(path, 0, n, endpoint=False))
 Xlist = x.copy()   # Xlist作为每个时刻车辆位置的矩阵
 # 初始化速度，v保存每辆车当前时刻的速度，按正态分布进行速度初始化，按截断正态分布进行生成
-v = np.round(np.random.rand(n)*ltv)      #速度随机分布
-v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
+#v = np.round(np.random.rand(n)*ltv)      #速度随机分布
+v=np.random.randint(0.7*ltv, ltv, [n])
+#v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
 v1 = v.copy()      #v1作为下一时刻速度更新容器
 Vlist = v.copy()   # Vlist作为每个时刻车辆速度的矩阵
 #记录随机慢化
@@ -66,12 +68,10 @@ SDM = np.zeros((n,times))
 #记录安全距离和距离
 DSafeMtx = np.zeros((times,n))
 DMtx = np.zeros((times,n))
-
-plt.figure(figsize=(5, 4), facecolor='w')
+#设置图片尺寸
+plt.figure(figsize=(6, 4), facecolor='w')
 #开始仿真
 for t in range(times):  # 遍历每个时刻
-    if t<2000:
-        plt.scatter([t]*n, x, marker='o', s=0.1, c='k', alpha=1,linewidths=0.2)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
     for i in range(n): # 遍历每辆车
         mat = matlist[i]  # 确定车辆类型
         # 计算当前车与前车的距离以及安全距离，注意是环形车道，i的前车为i-1
@@ -109,6 +109,11 @@ for t in range(times):  # 遍历每个时刻
                 v1[i] = v1[i-1]
         DSafeMtx[t][i] = ds
         DMtx[t][i] = d
+
+    if t<2000:
+        norm = matplotlib.colors.Normalize(vmin=0, vmax=3500)
+        plt.scatter([t]*n, x, marker='o', s=0.1, alpha=1,linewidths=0.2, c=v, cmap='jet_r', norm=norm)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
+
     #保存每个时刻的每辆车的位置、速度数据；对位置数据和速度数据进行更新
     Xlist = np.vstack((Xlist, (x + v1*step)%(path)))
     Vlist = np.vstack((Vlist, v1))
@@ -125,7 +130,9 @@ plt.xlim(0, 2000)
 plt.ylim(0, path)
 plt.ylabel(u'车辆位置', fontproperties=myfont)
 plt.xlabel(u'模拟时间', fontproperties=myfont)
-plt.title(u'交通模拟(车道长度%d,车辆数%d,初速度%s,减速概率%s)' % (path/100, n, 200, p), fontproperties=myfont)
+plt.clim(0, 35)
+plt.colorbar()
+plt.title(u'交通模拟(密度%d,车辆数%d,渗透率%s,减速概率%s)' % (round(n/(path/100000), 2), n, PER, p), fontproperties=myfont)
 #plt.tight_layout(pad=2)
-plt.savefig("cm.png",dpi = 600)
+plt.savefig(u'交通模拟(密度%d,车辆数%d,渗透率%s,减速概率%s).png' % (round(n/(path/100000), 2), n, PER, p),dpi = 600)
 #plt.show()
