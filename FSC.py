@@ -13,7 +13,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 #参数设置说明
-path = 40000.0   # 元胞总数
+path = 100000.0   # 元胞总数
 #n = 10         # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2         # 随机减速概率
@@ -27,9 +27,9 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-avg_VList = np.zeros((36, 6))
-std_VList = np.zeros((36, 6))
-flowList = np.zeros((36, 6))
+avg_VList = np.zeros((12, 6))
+std_VList = np.zeros((12, 6))
+flowList = np.zeros((12, 6))
 M = 10          # 随机次数
 
 
@@ -63,7 +63,7 @@ def FSC(v, delta_v, dis, U):
 
 for per in range(0,11,2):   #遍历不同的渗透率
     PER = per * 0.1
-    for u in range(2,73,2):  #遍历不同的密度
+    for u in range(10,121,10):  #遍历不同的密度
         n = u
         print(u'渗透率%.2f ,密度%.2f' % (PER, n))
         avg_V = np.zeros(M)  # 记录每个随机过程中的速度平均值
@@ -90,8 +90,8 @@ for per in range(0,11,2):   #遍历不同的渗透率
             x = np.round(np.linspace(path, 0, n, endpoint=False))
             Xlist = x.copy()   # Xlist作为每个时刻车辆位置的矩阵
             # 初始化速度，v保存每辆车当前时刻的速度，按正态分布进行速度初始化，按截断正态分布进行生成
-            v=np.random.randint(0.3*ltv, 0.6*ltv, [n])
-            v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
+            v=np.random.randint(0.49*ltv, 0.5*ltv, [n])
+            #v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
             v1 = v.copy()      #v1作为下一时刻速度更新容器
             Vlist = v.copy()   # Vlist作为每个时刻车辆速度的矩阵
             flow_count = 0     # flow_count记录流量
@@ -100,8 +100,6 @@ for per in range(0,11,2):   #遍历不同的渗透率
             #记录安全距离和距离
             DSafeMtx = np.zeros((times,n))
             DMtx = np.zeros((times,n))
-            #设置图片尺寸
-            #plt.figure(figsize=(6, 4), facecolor='w')
             #开始仿真
             for t in range(times):  # 遍历每个时刻
                 for i in range(n): # 遍历每辆车
@@ -116,16 +114,14 @@ for per in range(0,11,2):   #遍历不同的渗透率
                     #根据车辆跟车类型、当前速度、前车距离进行加速、减速、随机慢化
                     if mat[0] == 1 :  #车辆为 HV
                         if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
-                           v1[i] = min(v[i]+Ac*step, ltv, d/step)
+                           v1[i] = min(v[i]+Ac*step, ltv, d)
                         else:
-                            v1[i] = min(v[i]-De*step, d/step)
+                            v1[i] = min(v[i]-De*step, d)
                         #随机慢化
                         if t%(RT_HV/step) == 0:
                             ran = np.random.random()
-                            if (ran <= p) & (SDM[i][t - 1] == 0):
+                            if (ran <= p):
                                 SDM[i][t] = 1
-                                v1[i] = max(v1[i] - SDM[i][t] * De * step, 0)
-                            else:
                                 v1[i] = max(v1[i] - SDM[i][t] * De * step, 0)
                         else:
                             SDM[i][t] = SDM[i][t - 1]
@@ -133,17 +129,12 @@ for per in range(0,11,2):   #遍历不同的渗透率
                     elif mat[1] == 1:   #车辆为 AV
                         v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean() / 100) * 100
                         a = v_cmd - v[i]
-                        v1[i] = v[i] + a * step
-                        # v1[i] = min(v[i]+a*step, ltv, d/step+v1[i-1]-ds/step)
+                        v1[i] = min(v[i] + a * step, ltv, d+v1[i-1]-ds)
                     else:      #车辆为 CAV
                         if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
-                            v1[i] = min(v[i] + Ac * step, ltv, d / step + v1[i - 1] - ds / step)
+                            v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
                         else:
                             v1[i] = v1[i - 1]
-                        # v_cmd = FSC(v[i], v[i-1], d, ltv)
-                        # a = v_cmd - v[i]
-                        # v1[i] = v[i] + a * step
-                        # v1[i] = min(v[i]+a*step, ltv, d/step+v1[i-1]-ds/step)
                     DSafeMtx[t][i] = ds
                     DMtx[t][i] = d
                 #保存每个时刻的每辆车的位置、速度数据；对位置数据和速度数据进行更新
@@ -154,14 +145,14 @@ for per in range(0,11,2):   #遍历不同的渗透率
                     if (x[i] + v1[i] * step) > path:
                         flow_count += 1
                 x = (x + v1*step)%(path-1)     #更新位置
-                v = v1         #更新速度
+                v = v1.copy()        #更新速度
 
             #指标  计算100秒以后的指标
             avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0 * 3.6
             std_V[m] = np.std(Vlist[1000:, :]) / 100.0 * 3.6
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
 
-        j = int(u/2) - 1
+        j = int(u/10) - 1
         k = int(per/2)
         avg_VList[j, k] = round(avg_V.mean(), 2)
         std_VList[j, k] = round(std_V.mean(), 2)
@@ -171,9 +162,9 @@ for per in range(0,11,2):   #遍历不同的渗透率
 
     #plt.plot(np.arange(2,74,2)*2.5, flowList[:, k], marker=marklist[int(per/2)], markersize=2, linewidth=1)
 
-flowdata = pd.DataFrame(flowList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(2,73,2)*2.5)
-vdata = pd.DataFrame(avg_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(2,73,2)*2.5)
-std_vdata = pd.DataFrame(std_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(2,73,2)*2.5)
+flowdata = pd.DataFrame(flowList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
+vdata = pd.DataFrame(avg_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
+std_vdata = pd.DataFrame(std_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
 flowdata.to_csv('FlowData-FSC.csv')
 vdata.to_csv('VData-FSC.csv')
 std_vdata.to_csv('Std_VData-FSC.csv')
