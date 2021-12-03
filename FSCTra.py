@@ -152,6 +152,7 @@ for m in range(M):
         x = (x + v1*step)%(path-1)     #更新位置
         v = v1         #更新速度
 
+
     #指标 计算100秒以后的指标
     ##平均速度
     avg_V[m] = np.mean(Vlist[1000:,:], axis=0).mean()/100.0*3.6

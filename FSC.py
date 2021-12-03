@@ -30,7 +30,7 @@ ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
 avg_VList = np.zeros((12, 6))
 std_VList = np.zeros((12, 6))
 flowList = np.zeros((12, 6))
-M = 10          # 随机次数
+M = 5          # 随机次数
 
 
 
@@ -58,7 +58,6 @@ def FSC(v, delta_v, dis, U):
     else:
         v_cmd = U
     return v_cmd
-
 
 
 for per in range(0,11,2):   #遍历不同的渗透率
