@@ -25,9 +25,9 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-avg_VList = np.zeros((12, 6))
-std_VList = np.zeros((12, 6))
-flowList = np.zeros((12, 6))
+avg_VList = np.zeros((12, 11))
+std_VList = np.zeros((12, 11))
+flowList = np.zeros((12, 11))
 M = 5          # 随机次数
 
 
@@ -59,7 +59,7 @@ def FSC(v, delta_v, dis, U):
 
 
 
-for per in range(0,11,2):   #遍历不同的渗透率
+for per in range(0,11,1):   #遍历不同的渗透率
     PER = per * 0.1
     for u in range(10,121,10):  #遍历不同的密度
         n = u
@@ -152,7 +152,7 @@ for per in range(0,11,2):   #遍历不同的渗透率
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
 
         j = int(u/10) - 1
-        k = int(per/2)
+        k = int(per/1)
         avg_VList[j, k] = round(avg_V.mean(), 2)
         std_VList[j, k] = round(std_V.mean(), 2)
         flowList[j, k] = round(avg_F.mean(), 2)
@@ -161,9 +161,11 @@ for per in range(0,11,2):   #遍历不同的渗透率
 
     #plt.plot(np.arange(2,74,2)*2.5, flowList[:, k], marker=marklist[int(per/2)], markersize=2, linewidth=1)
 
-flowdata = pd.DataFrame(flowList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
-vdata = pd.DataFrame(avg_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
-std_vdata = pd.DataFrame(std_VList, columns=['0%','20%','40%','60%','80%','100%'], index=np.arange(10,121,10))
+
+
+flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
 flowdata.to_csv('FlowData-CA.csv')
 vdata.to_csv('VData-CA.csv')
 std_vdata.to_csv('Std_VData-CA.csv')

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import random
+from Fc_Te_Cal import FcTeCal
 
 #设置画图字体
 plt.rcParams['font.sans-serif'] = ['Times New Roman']
@@ -29,7 +30,7 @@ M = 1          # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
-
+avg_MOE = np.zeros((M, 4)) #记录每个随机过程中的污染物排放
 
 
 #定义相关函数
@@ -69,11 +70,13 @@ for m in range(M):
     v1 = v.copy()      #v1作为下一时刻速度更新容器
     Vlist = v.copy()   # Vlist作为每个时刻车辆速度的矩阵
     flow_count = 0     # flow_count记录流量
-    #记录随机慢化
+    #记录随机慢化状态
     SDM = np.zeros((n,times))
     #记录安全距离和距离
-    DSafeMtx = np.zeros((times,n))
-    DMtx = np.zeros((times,n))
+    DSafeMtx = np.zeros((times, n))
+    DMtx = np.zeros((times, n))
+    #记录加速度
+    Alist = np.zeros((times, n))
 
     #开始仿真
     for t in range(times):  # 遍历每个时刻
@@ -125,6 +128,8 @@ for m in range(M):
                 flow_count += 1
         x = (x + v1*step)%(path-1)     #更新位置
         v = v1.copy()         #更新速度
+    Alist = np.diff(Vlist[1:], axis=0)
+    avg_MOE[m] = FcTeCal(Vlist[1:-1], Alist, step)
 
     #指标 计算100秒以后的指标
     ##平均速度
