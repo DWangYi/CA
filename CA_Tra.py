@@ -128,7 +128,7 @@ for m in range(M):
                 flow_count += 1
         x = (x + v1*step)%(path-1)     #更新位置
         v = v1.copy()         #更新速度
-    Alist = np.diff(Vlist[1:], axis=0)
+    Alist = np.diff(Vlist[1:], axis=0)/step
     avg_MOE[m] = FcTeCal(Vlist[1:-1], Alist, step)
 
     #指标 计算100秒以后的指标

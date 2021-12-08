@@ -19,8 +19,8 @@ def FcTeCal(Vmtx, Amtx, step):
                [0.000000569, -0.000321, 0.000001943, -0.00000001257413]]]
     RC_mtx = np.array(RC_mtx)
     Vmtx = np.array(Vmtx)/100
-    Amtx = np.array(Amtx)/10
-    reslist = np.array([0, 0, 0, 0])
+    Amtx = np.abs(np.array(Amtx)/100)
+    reslist = np.array([0.0, 0.0, 0.0, 0.0])
     print(Vmtx)
     print(Amtx)
 
@@ -31,7 +31,10 @@ def FcTeCal(Vmtx, Amtx, step):
         for i in range(4):
             for j in range(4):
                 print(RC[i][j])
-                MOE = MOE + (np.sum(RC[i][j] * (Vmtx**i) * (Amtx**j) * step, axis=0)).mean()
+                moe = (np.sum(RC[i][j] * (Vmtx**i) * (Amtx**j) * step, axis=0)).mean()/400
+                print(moe)
+                MOE = MOE + moe
+                print(MOE)
         print(MOE)
         reslist[k] = np.exp(MOE)
 
