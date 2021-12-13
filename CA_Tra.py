@@ -12,13 +12,13 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 #参数设置说明
 ##环形车道长度400米，每个元胞0.01米，仿真时间200秒，仿真步长0.1秒。
-path = 100000.0   # 元胞总数
-n = 100        # 车辆数目
+path = 100000   # 元胞总数
+n = 40        # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2        # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.0        # 网联车渗透率
+PER = 0.1        # 网联车渗透率
 RT_HV = 2      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
@@ -26,7 +26,7 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 1          # 随机次数
+M = 5          # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -136,7 +136,7 @@ for m in range(M):
     avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0 * 3.6
     std_V[m] = np.std(Vlist[1000:, :] / 100.0) * 3.6
     avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
-
+print(np.mean(avg_MOE, axis=0))
 print(u'CA模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f km/h,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 

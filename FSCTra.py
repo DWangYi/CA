@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import random
+from Fc_Te_Cal import FcTeCal
 
 #设置画图字体
 plt.rcParams['font.sans-serif'] = ['Times New Roman']
@@ -25,10 +26,11 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 10         # 随机次数
+M = 5         # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
+avg_MOE = np.zeros((M, 4)) #记录每个随机过程中的污染物排放
 
 #定义相关函数
 ##安全距离计算函数 v1为当前车，v2为前车
@@ -88,6 +90,8 @@ for m in range(M):
     #记录安全距离和距离
     DSafeMtx = np.zeros((times,n))
     DMtx = np.zeros((times,n))
+    # 记录加速度
+    Alist = np.zeros((times, n))
 
 
     #开始仿真
@@ -150,7 +154,10 @@ for m in range(M):
             if (x[i] + v1[i] * step) > path:
                 flow_count += 1
         x = (x + v1*step)%(path-1)     #更新位置
-        v = v1         #更新速度
+        v = v1.copy()         #更新速度
+    Alist = np.diff(Vlist[1:], axis=0) / step
+    avg_MOE[m] = FcTeCal(Vlist[1:-1], Alist, step)
+
 
 
     #指标 计算100秒以后的指标
@@ -158,7 +165,7 @@ for m in range(M):
     avg_V[m] = np.mean(Vlist[1000:,:], axis=0).mean()/100.0*3.6
     std_V[m] = np.std(Vlist[1000:,:])/100.0*3.6
     avg_F[m] = max(round(flow_count/(times*step)*3600, 0), 0)
-
+print(np.mean(avg_MOE, axis=0))
 print(u'FSC模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f km/h,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 
