@@ -1,4 +1,5 @@
 import numpy as np
+#np.seterr(divide='ignore',invalid='ignore')
 
 def FcTeCal(Vmtx, Amtx, step):
     RC_mtx = [[[-0.679439, 0.135273, 0.015946, -0.001189],
@@ -21,25 +22,77 @@ def FcTeCal(Vmtx, Amtx, step):
     Vmtx = np.array(Vmtx)/100
     Amtx = np.abs(np.array(Amtx)/100)
     reslist = np.array([0.0, 0.0, 0.0, 0.0])
-    #print(Vmtx)
-    #print(Amtx)
 
     for k in range(4):
         MOE = 0
         RC = RC_mtx[k]
-        #print(RC)
         for i in range(4):
             for j in range(4):
-                #print(RC[i][j])
                 moe = (np.sum(RC[i][j] * (Vmtx**i) * (Amtx**j) * step, axis=0)).mean()/400
-                #print(moe)
                 MOE = MOE + moe
-                #print(MOE)
-        #print(MOE)
         reslist[k] = np.exp(MOE)
-
     return reslist
 
 
+def FMCal_VSP(Vmtx, Amtx, step):
+    Vmtx = np.array(Vmtx) / 100.0
+    Amtx = np.abs(np.array(Amtx) / 100.0)
+    VSP = (Vmtx * (1.1*Amtx + 0.132) + 0.000302*(Vmtx**3))
+    NFR = 1.71 * (VSP**0.42) * step
+    avgNFR = NFR.mean()*10
+    return avgNFR
+
+def EMCal_CO(Vmtx, Amtx, step):
+    Vmtx = np.array(Vmtx) / 100.0
+    Amtx = np.array(Amtx) / 100.0
+
+    f1 = 0.553; f2 = 0.16; f3 = -0.00289; f4 = 0.266; f5 = 0.511; f6 = 0.183
+    em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
+    EM = np.maximum(em*step, np.zeros(em.shape))
+    EM_cal = EM.mean()*10
+    return EM_cal
+
+def EMCal_NO(Vmtx, Amtx, step):
+    Vmtx = np.array(Vmtx) / 100.0
+    Amtx = np.array(Amtx) / 100.0
+
+    f = Amtx.copy()
+    f1 = np.where(f >= -0.5, 0.000619, 0.000217)
+    f2 = np.where(f >= -0.5, 0.00008, 0.0)
+    f3 = np.where(f >= -0.5, -0.00000403, 0.0)
+    f4 = np.where(f >= -0.5, -0.000413, 0.0)
+    f5 = np.where(f >= -0.5, 0.00038, 0.0)
+    f6 = np.where(f >= -0.5, 0.000177, 0.0)
+
+    em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
+    EM = np.maximum(em*step, np.zeros(em.shape))
+    EM_cal = EM.mean()*10
+    return EM_cal
 
 
+def EMCal_VOC(Vmtx, Amtx, step):
+    Vmtx = np.array(Vmtx) / 100.0
+    Amtx = np.array(Amtx) / 100.0
+
+    f = Amtx.copy()
+    f1 = np.where(f >= -0.5, 0.000447, 0.00263)
+    f2 = np.where(f >= -0.5, 0.000000732, 0.0)
+    f3 = np.where(f >= -0.5, -0.0000000287, 0.0)
+    f4 = np.where(f >= -0.5, -0.00000341, 0.0)
+    f5 = np.where(f >= -0.5, 0.00000494, 0.0)
+    f6 = np.where(f >= -0.5, 0.00000166, 0.0)
+
+    em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
+    EM = np.maximum(em*step, np.zeros(em.shape))
+    EM_cal = EM.mean()*10
+    return EM_cal
+
+def EMCal_PM(Vmtx, Amtx, step):
+    Vmtx = np.array(Vmtx) / 100.0
+    Amtx = np.array(Amtx) / 100.0
+
+    f1 = 0.0; f2 = 0.0000157; f3 = -0.000000921; f4 = 0.0; f5 = 0.0000375; f6 = 0.0000189
+    em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
+    EM = np.maximum(em*step, np.zeros(em.shape))
+    EM_cal = EM.mean()*10
+    return EM_cal

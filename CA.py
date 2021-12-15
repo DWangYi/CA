@@ -4,10 +4,12 @@ import matplotlib
 import random
 from matplotlib.pyplot import MultipleLocator, FormatStrFormatter
 import pandas as pd
+from Fc_Te_Cal import FMCal_VSP, EMCal_CO, EMCal_NO, EMCal_VOC, EMCal_PM
 
 #设置画图字体
 plt.rcParams['font.sans-serif'] = ['Times New Roman']
 matplotlib.rcParams['axes.unicode_minus'] = False
+
 
 
 #参数设置说明
@@ -15,7 +17,7 @@ path = 100000.0   # 元胞总数
 #n = 10         # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2         # 随机减速概率
-times = 2000    # 模拟的时刻数目
+times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
 #PER = 1.0       # 网联车渗透率
 RT_HV = 2      #人工车辆反应时间
@@ -25,9 +27,15 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-avg_VList = np.zeros((12, 11))
-std_VList = np.zeros((12, 11))
-flowList = np.zeros((12, 11))
+avg_VList = np.zeros((12, 11))  #记录每个饱和度、密度对应平均速度
+std_VList = np.zeros((12, 11))  #记录每个饱和度、密度对应平均速度标准差
+flowList = np.zeros((12, 11))   #记录每个饱和度、密度对应吞吐量
+NFRList = np.zeros((12, 11))  #记录每个饱和度、密度对应油耗
+ECOList = np.zeros((12, 11))  #记录每个饱和度、密度对应CO2排放
+ENOList = np.zeros((12, 11))  #记录每个饱和度、密度对应NO排放
+EVOCList = np.zeros((12, 11))  #记录每个饱和度、密度对应VOC排放
+EPMList = np.zeros((12, 11))  #记录每个饱和度、密度对应PM排放
+
 M = 5          # 随机次数
 
 
@@ -67,9 +75,17 @@ for per in range(0,11,1):   #遍历不同的渗透率
         avg_V = np.zeros(M)  # 记录每个随机过程中的速度平均值
         std_V = np.zeros(M)  # 记录每个随机过程中的速度标准差
         avg_F = np.zeros(M)  # 记录每个随机过程中的流量平均值
+        avg_NFR = np.zeros(M)  # 记录每个随机过程中的油耗
+        avg_ECO = np.zeros(M)  # 记录每个随机过程中的CO2排放
+        avg_ENO = np.zeros(M)  # 记录每个随机过程中的NO排放
+        avg_EVOC = np.zeros(M)  # 记录每个随机过程中的VOC排放
+        avg_EPM = np.zeros(M)  # 记录每个随机过程中的PM排放
+
+
+
         for m in range(M):   #遍历每一个随机过程
             #随机生成联网车辆编号
-            random.seed(1)
+            random.seed(100)
             AV_index = random.sample(range(0,n), int(n*PER))
             AV_index.sort()
             # 初始化车辆类型列表并对列表进行遍历更新，得到每个车辆的跟车类型(HV\AV\CAV)
@@ -98,6 +114,9 @@ for per in range(0,11,1):   #遍历不同的渗透率
             #记录安全距离和距离
             DSafeMtx = np.zeros((times,n))
             DMtx = np.zeros((times,n))
+            # 记录加速度
+            Alist = np.zeros((times, n))
+
             #开始仿真
             for t in range(times):  # 遍历每个时刻
                 for i in range(n): # 遍历每辆车
@@ -114,21 +133,21 @@ for per in range(0,11,1):   #遍历不同的渗透率
                         if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                            v1[i] = min(v[i]+Ac*step, ltv, d)
                         else:
-                            v1[i] = min(v[i]-De*step, d)
+                            v1[i] = max(0, min(v[i]-De*step, d))
                         #随机慢化
                         if t%(RT_HV/step) == 0:
                             ran = np.random.random()
                             if (ran <= p):
                                 SDM[i][t] = 1
-                                v1[i] = max(v1[i] - SDM[i][t] * De * step, 0)
+                                v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
                         else:
                             SDM[i][t] = SDM[i][t - 1]
-                            v1[i] = max(v1[i] - SDM[i][t] * De * step, 0)
+                            v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
                     elif mat[1] == 1:   #车辆为 AV
                         if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                             v1[i] = min(v[i] + Ac * step, ltv, d)
                         else:
-                            v1[i] = min(v[i] - De * step, d)
+                            v1[i] = max(0, min(v[i] - De * step, d))
                     else:      #车辆为 CAV
                         if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                             v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
@@ -147,15 +166,35 @@ for per in range(0,11,1):   #遍历不同的渗透率
                 v = v1.copy()        #更新速度
 
             #指标  计算100秒以后的指标
-            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0 * 3.6
-            std_V[m] = np.std(Vlist[1000:, :]) / 100.0 * 3.6
+            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
+            std_V[m] = np.std(Vlist[1000:, :]/100.0)
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
+            #计算油耗、排放指标
+            Alist = np.diff(Vlist[:], axis=0) / step
+            avg_NFR[m] = FMCal_VSP(Vlist[:-1], Alist, step)
+            avg_ECO[m] = EMCal_CO(Vlist[:-1], Alist, step)
+            avg_ENO[m] = EMCal_NO(Vlist[:-1], Alist, step)
+            avg_EVOC[m] = EMCal_VOC(Vlist[:-1], Alist, step)
+            avg_EPM[m] = EMCal_PM(Vlist[:-1], Alist, step)
+
+            avg_NFR1 = 1000.0 / avg_V.mean() * avg_NFR
+            avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
+            avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
+            avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
+            avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+
 
         j = int(u/10) - 1
         k = int(per/1)
         avg_VList[j, k] = round(avg_V.mean(), 2)
         std_VList[j, k] = round(std_V.mean(), 2)
         flowList[j, k] = round(avg_F.mean(), 2)
+        NFRList[j, k] = round(avg_NFR1.mean(), 5)
+        ECOList[j, k] = round(avg_ECO1.mean(), 5)
+        ENOList[j, k] = round(avg_ENO1.mean(), 5)
+        EVOCList[j, k] = round(avg_EVOC1.mean(), 5)
+        EPMList[j, k] = round(avg_EPM1.mean(), 5)
+
 
         #print(u'平均速度%.2f km/h,流量%.2f veh/s' % (avg_V/100.0*3.6, max(round(flow-n, 0), 0)))
 
@@ -166,10 +205,19 @@ for per in range(0,11,1):   #遍历不同的渗透率
 flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
 vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
 std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
 flowdata.to_csv('FlowData-CA.csv')
 vdata.to_csv('VData-CA.csv')
 std_vdata.to_csv('Std_VData-CA.csv')
-
+NFRdata.to_csv('NFRData-CA.csv')
+ECOdata.to_csv('ECOData-CA.csv')
+ENOdata.to_csv('ENOData-CA.csv')
+EVOCdata.to_csv('EVOCData-CA.csv')
+EPMdata.to_csv('EPMData-CA.csv')
 
 
 '''

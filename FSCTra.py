@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import random
-from Fc_Te_Cal import FcTeCal
+from Fc_Te_Cal import FcTeCal, FMCal_VSP, EMCal_CO, EMCal_NO, EMCal_VOC, EMCal_PM
 
 #设置画图字体
 plt.rcParams['font.sans-serif'] = ['Times New Roman']
@@ -18,8 +18,8 @@ ltv = 3500      # 最大限速
 p = 0.2        # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.1      # 网联车渗透率
-RT_HV = 2      #人工车辆反应时间
+PER = 0.4      # 网联车渗透率
+RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
 De = 300         # 车辆一般减速度  3 m2/s
@@ -31,6 +31,11 @@ avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
 avg_MOE = np.zeros((M, 4)) #记录每个随机过程中的污染物排放
+avg_NFR = np.zeros(M) #记录每个随机过程中的油耗
+avg_ECO = np.zeros(M) #记录每个随机过程中的CO2排放
+avg_ENO = np.zeros(M) #记录每个随机过程中的NO排放
+avg_EVOC = np.zeros(M) #记录每个随机过程中的VOC排放
+avg_EPM = np.zeros(M) #记录每个随机过程中的PM排放
 
 #定义相关函数
 ##安全距离计算函数 v1为当前车，v2为前车
@@ -43,7 +48,7 @@ def d_safe(v1,v2):
 ##FollowerStopper策略速度生成函数
 def FSC(v, v1, dis, U):
     delta_x10 = 4.5; delta_x20 = 5.25; delta_x30 = 6.0
-    d1 = 3; d2 = 1.0; d3 = 0.5
+    d1 = 1.5; d2 = 1.0; d3 = 0.5
     delta_x1 = delta_x10 + (min(v1-v, 0) ** 2) / (2.0 * d1)
     delta_x2 = delta_x20 + (min(v1-v, 0) ** 2) / (2.0 * d2)
     delta_x3 = delta_x30 + (min(v1-v, 0) ** 2) / (2.0 * d3)
@@ -60,7 +65,7 @@ def FSC(v, v1, dis, U):
 
 for m in range(M):
     #随机生成联网车辆编号
-    random.seed(15)
+    random.seed(100)
     AV_index = random.sample(range(0,n), int(n*PER))
     #AV_index = list(np.arange(0, n, 2))
     #AV_index.sort()
@@ -101,7 +106,7 @@ for m in range(M):
             # 计算当前车与前车的距离以及安全距离，注意是环形车道，i的前车为i-1
             if x[i] > x[i-1]:
                 d = path - x[i] + x[i-1] - cl
-                ds = d_safe(v[i],v[i-1])  #计算当前车当前速度下的对应安全距离
+                ds = d_safe(v[i], v[i-1])  #计算当前车当前速度下的对应安全距离
             else:
                 d = x[i-1] - x[i] - cl
                 ds = d_safe(v[i], v[i-1])  #计算当前车当前速度下的对应安全距离
@@ -110,7 +115,7 @@ for m in range(M):
                 if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                    v1[i] = min(v[i]+Ac*step, ltv, d)
                 else:
-                    v1[i] = min(v[i]-De*step, d)
+                    v1[i] = max(0, min(v[i]-De*step, d))
                 #随机慢化
                 if t%(RT_HV/step) == 0:
                     ran = np.random.random()
@@ -119,17 +124,18 @@ for m in range(M):
                         v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
                 else:
                     SDM[i][t] = SDM[i][t-1]
+                    v1[i] = max(0, min(v1[i] - SDM[i][t] * De * step, d))
                     '''
                     if SDM[i][t] == 1:
                         v1[i] = min(max(v[i] - SDM[i][t] * De * step, 0), d)
                     else:
                         v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
                     '''
-                    v1[i] = max(v1[i] - SDM[i][t] * De * step, 0)
             elif mat[1] == 1:   #车辆为 AV
-                v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100*1.2)*100
+                v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100*1.4)*100
+                #v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, 8.57) * 100
                 a = v_cmd - v[i]
-                v1[i] = min(v[i] + a * step, ltv, d)
+                v1[i] = max(0, min(v[i] + a * step, ltv, d + v1[i - 1] - ds ))
             else:      #车辆为 CAV
                 if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
@@ -155,18 +161,35 @@ for m in range(M):
                 flow_count += 1
         x = (x + v1*step)%(path-1)     #更新位置
         v = v1.copy()         #更新速度
-    Alist = np.diff(Vlist[1:], axis=0) / step
-    avg_MOE[m] = FcTeCal(Vlist[1:-1], Alist, step)
-
-
 
     #指标 计算100秒以后的指标
     ##平均速度
-    avg_V[m] = np.mean(Vlist[1000:,:], axis=0).mean()/100.0*3.6
-    std_V[m] = np.std(Vlist[1000:,:])/100.0*3.6
+    avg_V[m] = np.mean(Vlist[1000:,:], axis=0).mean()/100.0
+    std_V[m] = np.std(Vlist[1000:, :] / 100.0)
     avg_F[m] = max(round(flow_count/(times*step)*3600, 0), 0)
+
+    Alist = np.diff(Vlist[:], axis=0) / step
+    avg_MOE[m] = FcTeCal(Vlist[1000:-1], Alist[1000:], step)
+    avg_NFR[m] = FMCal_VSP(Vlist[1000:-1], Alist[1000:], step)
+    avg_ECO[m] = EMCal_CO(Vlist[1000:-1], Alist[1000:], step)
+    avg_ENO[m] = EMCal_NO(Vlist[1000:-1], Alist[1000:], step)
+    avg_EVOC[m] = EMCal_VOC(Vlist[1000:-1], Alist[1000:], step)
+    avg_EPM[m] = EMCal_PM(Vlist[1000:-1], Alist[1000:], step)
+
+    avg_NFR1 = 1000.0 / avg_V.mean() * avg_NFR
+    avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
+    avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
+    avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
+    avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+
+
 print(np.mean(avg_MOE, axis=0))
-print(u'FSC模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f km/h,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
+print(avg_NFR.mean())
+print(avg_ECO.mean())
+print(avg_ENO.mean())
+print(avg_EVOC.mean())
+print(avg_EPM.mean())
+print(u'FSC模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 
 
