@@ -13,7 +13,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 #参数设置说明
 ##环形车道长度400米，每个元胞0.01米，仿真时间200秒，仿真步长0.1秒。
 path = 100000.0   # 元胞总数
-n = 40       # 车辆数目
+n = 60       # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2        # 随机减速概率
 times = 4000    # 模拟的时刻数目
@@ -26,7 +26,7 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 5         # 随机次数
+M = 1         # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -115,7 +115,7 @@ for m in range(M):
                 if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                    v1[i] = min(v[i]+Ac*step, ltv, d)
                 else:
-                    v1[i] = max(0, min(v[i]-De*step, d))
+                    v1[i] = max(0, min(v[i], d))
                 #随机慢化
                 if t%(RT_HV/step) == 0:
                     ran = np.random.random()
@@ -125,28 +125,15 @@ for m in range(M):
                 else:
                     SDM[i][t] = SDM[i][t-1]
                     v1[i] = max(0, min(v1[i] - SDM[i][t] * De * step, d))
-                    '''
-                    if SDM[i][t] == 1:
-                        v1[i] = min(max(v[i] - SDM[i][t] * De * step, 0), d)
-                    else:
-                        v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
-                    '''
             elif mat[1] == 1:   #车辆为 AV
-                v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100*1.4)*100
-                #v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, 8.57) * 100
+                v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100)*100
                 a = v_cmd - v[i]
-                v1[i] = max(0, min(v[i] + a * step, ltv, d + v1[i - 1] - ds ))
+                v1[i] = max(0, min(v[i] + a * step, ltv, d))
             else:      #车辆为 CAV
                 if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
                 else:
                     v1[i] = v1[i - 1]
-                '''
-                v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean()/100) * 100
-                a = v_cmd - v[i]
-                v1[i] = v[i] + a * step
-                '''
-
             DSafeMtx[t][i] = ds
             DMtx[t][i] = d
         #norm = matplotlib.colors.Normalize(vmin=0, vmax=3500)
@@ -184,11 +171,11 @@ for m in range(M):
 
 
 print(np.mean(avg_MOE, axis=0))
-print(avg_NFR.mean())
-print(avg_ECO.mean())
-print(avg_ENO.mean())
-print(avg_EVOC.mean())
-print(avg_EPM.mean())
+print(avg_NFR1.mean())
+print(avg_ECO1.mean())
+print(avg_ENO1.mean())
+print(avg_EVOC1.mean())
+print(avg_EPM1.mean())
 print(u'FSC模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 

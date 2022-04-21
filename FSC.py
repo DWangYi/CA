@@ -28,16 +28,16 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-avg_VList = np.zeros((12, 6))
-std_VList = np.zeros((12, 6))
-flowList = np.zeros((12, 6))
-NFRList = np.zeros((12, 11))  #记录每个饱和度、密度对应油耗
-ECOList = np.zeros((12, 11))  #记录每个饱和度、密度对应CO2排放
-ENOList = np.zeros((12, 11))  #记录每个饱和度、密度对应NO排放
-EVOCList = np.zeros((12, 11))  #记录每个饱和度、密度对应VOC排放
-EPMList = np.zeros((12, 11))  #记录每个饱和度、密度对应PM排放
+avg_VList = np.zeros((10, 11))
+std_VList = np.zeros((10, 11))
+flowList = np.zeros((10, 11))
+NFRList = np.zeros((10, 11))  #记录每个饱和度、密度对应油耗
+ECOList = np.zeros((10, 11))  #记录每个饱和度、密度对应CO2排放
+ENOList = np.zeros((10, 11))  #记录每个饱和度、密度对应NO排放
+EVOCList = np.zeros((10, 11))  #记录每个饱和度、密度对应VOC排放
+EPMList = np.zeros((10, 11))  #记录每个饱和度、密度对应PM排放
 
-M = 5          # 随机次数
+M = 10          # 随机次数
 
 
 
@@ -67,9 +67,9 @@ def FSC(v, delta_v, dis, U):
     return v_cmd
 
 
-for per in range(0,11,2):   #遍历不同的渗透率
+for per in range(0,11,1):   #遍历不同的渗透率
     PER = per * 0.1
-    for u in range(10,121,10):  #遍历不同的密度
+    for u in range(10,101,10):  #遍历不同的密度
         n = u
         print(u'渗透率%.2f ,密度%.2f' % (PER, n))
         avg_V = np.zeros(M)  # 记录每个随机过程中的速度平均值
@@ -129,7 +129,7 @@ for per in range(0,11,2):   #遍历不同的渗透率
                         if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                            v1[i] = min(v[i]+Ac*step, ltv, d)
                         else:
-                            v1[i] = max(0, min(v[i]-De*step, d))
+                            v1[i] = max(0, min(v[i], d))
                         #随机慢化
                         if t%(RT_HV/step) == 0:
                             ran = np.random.random()
@@ -161,8 +161,8 @@ for per in range(0,11,2):   #遍历不同的渗透率
                 v = v1.copy()        #更新速度
 
             #指标  计算100秒以后的指标
-            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0 * 3.6
-            std_V[m] = np.std(Vlist[1000:, :]) / 100.0 * 3.6
+            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
+            std_V[m] = np.std(Vlist[1000:, :]) / 100.0 
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
 
             # 计算油耗、排放指标
@@ -195,14 +195,14 @@ for per in range(0,11,2):   #遍历不同的渗透率
 
     #plt.plot(np.arange(2,74,2)*2.5, flowList[:, k], marker=marklist[int(per/2)], markersize=2, linewidth=1)
 
-flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
-EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,121,10))
+flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 flowdata.to_csv('FlowData-FSC.csv')
 vdata.to_csv('VData-FSC.csv')
 std_vdata.to_csv('Std_VData-FSC.csv')
