@@ -39,7 +39,7 @@ def FMCal_VSP(Vmtx, Amtx, step):
     Amtx = np.abs(np.array(Amtx) / 100.0)
     VSP = (Vmtx * (1.1*Amtx + 0.132) + 0.000302*(Vmtx**3))
     NFR = 1.71 * (VSP**0.42) * step
-    avgNFR = np.sum(NFR, axis=0).mean()/400
+    avgNFR = NFR.mean()*10
     return avgNFR
 
 def EMCal_CO(Vmtx, Amtx, step):
@@ -49,7 +49,7 @@ def EMCal_CO(Vmtx, Amtx, step):
     f1 = 0.553; f2 = 0.16; f3 = -0.00289; f4 = 0.266; f5 = 0.511; f6 = 0.183
     em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
     EM = np.maximum(em*step, np.zeros(em.shape))
-    EM_cal = np.sum(EM, axis=0).mean()/400
+    EM_cal = EM.mean()*10
     return EM_cal
 
 def EMCal_NO(Vmtx, Amtx, step):
@@ -66,7 +66,7 @@ def EMCal_NO(Vmtx, Amtx, step):
 
     em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
     EM = np.maximum(em*step, np.zeros(em.shape))
-    EM_cal = np.sum(EM, axis=0).mean()/400
+    EM_cal = EM.mean()*10
     return EM_cal
 
 
@@ -84,7 +84,7 @@ def EMCal_VOC(Vmtx, Amtx, step):
 
     em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
     EM = np.maximum(em*step, np.zeros(em.shape))
-    EM_cal = np.sum(EM, axis=0).mean()/400
+    EM_cal = EM.mean()*10
     return EM_cal
 
 def EMCal_PM(Vmtx, Amtx, step):
@@ -94,5 +94,5 @@ def EMCal_PM(Vmtx, Amtx, step):
     f1 = 0.0; f2 = 0.0000157; f3 = -0.000000921; f4 = 0.0; f5 = 0.0000375; f6 = 0.0000189
     em = f1 + f2*Vmtx + f3*(Vmtx**2) + f4*Amtx + f5*(Amtx**2) + f6*Vmtx*Amtx
     EM = np.maximum(em*step, np.zeros(em.shape))
-    EM_cal = np.sum(EM, axis=0).mean()/400
+    EM_cal = EM.mean()*10
     return EM_cal

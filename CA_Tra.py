@@ -13,20 +13,20 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 #参数设置说明
 ##环形车道长度400米，每个元胞0.01米，仿真时间200秒，仿真步长0.1秒。
 path = 100000   # 元胞总数
-n = 40        # 车辆数目
+n = 60        # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.2        # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 1        # 网联车渗透率
-RT_HV = 2      #人工车辆反应时间
+PER = 0.2        # 网联车渗透率
+RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
 De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 10          # 随机次数
+M = 1          # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -45,6 +45,8 @@ def d_safe(v1,v2):
     c = mat[2] # 车辆为CAV车辆，则c=1，否则c=0
     ds = v1*(a*RT_HV+b*RT_AV) + (a+b)*(v1**2-v2**2)/(2.0*DE) + c*ds_cav
     return round(ds)
+
+
 
 
 for m in range(M):
@@ -98,7 +100,7 @@ for m in range(M):
                 if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i]+Ac*step, ltv, d)
                 else:
-                    v1[i] = max(0, min(v[i]-De*step, d))
+                    v1[i] = max(0, min(v[i], d))
                 #随机慢化
                 if t%(RT_HV/step) == 0:
                     ran = np.random.random()
@@ -112,7 +114,7 @@ for m in range(M):
                 if d > ds:  #当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = max(0, min(v[i] + Ac * step, ltv, d))
                 else:
-                    v1[i] = max(0, min(v[i] - De * step, d))
+                    v1[i] = max(0, min(v[i], d))
             else:      #车辆为 CAV
                 if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
@@ -135,38 +137,40 @@ for m in range(M):
 
     #指标 计算100秒以后的指标
     ##平均速度
-    avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0 * 3.6
-    std_V[m] = np.std(Vlist[1000:, :] / 100.0) * 3.6
+    avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
+    std_V[m] = np.std(Vlist[1000:, :] / 100.0)
     avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
 
     Alist = np.diff(Vlist[:], axis=0) / step
-    avg_MOE[m] = FcTeCal(Vlist[:-1], Alist, step)
-    avg_NFR[m] = FMCal_VSP(Vlist[:-1], Alist, step)
-    avg_ECO[m] = EMCal_CO(Vlist[:-1], Alist, step)
-    avg_ENO[m] = EMCal_NO(Vlist[:-1], Alist, step)
-    avg_EVOC[m] = EMCal_VOC(Vlist[:-1], Alist, step)
-    avg_EPM[m] = EMCal_PM(Vlist[:-1], Alist, step)
+    #avg_MOE[m] = FcTeCal(Vlist[1000:-1], Alist[1000:], step)
+    avg_NFR[m] = FMCal_VSP(Vlist[1000:-1], Alist[1000:], step)
+    avg_ECO[m] = EMCal_CO(Vlist[1000:-1], Alist[1000:], step)
+    avg_ENO[m] = EMCal_NO(Vlist[1000:-1], Alist[1000:], step)
+    avg_EVOC[m] = EMCal_VOC(Vlist[1000:-1], Alist[1000:], step)
+    avg_EPM[m] = EMCal_PM(Vlist[1000:-1], Alist[1000:], step)
 
-    avg_NFR = 1000.0/avg_V.mean()*avg_NFR
-    avg_ECO = 1000.0 / avg_V.mean() * avg_ECO
-    avg_ENO = 1000.0 / avg_V.mean() * avg_ENO
-    avg_EVOC = 1000.0 / avg_V.mean() * avg_EVOC
-    avg_EPM = 1000.0 / avg_V.mean() * avg_EPM
+    avg_NFR1 = 1000.0/avg_V.mean()*avg_NFR
+    avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
+    avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
+    avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
+    avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
 
 
 
-print(np.mean(avg_MOE, axis=0))
-print(avg_NFR.mean())
-print(avg_ECO.mean())
-print(avg_ENO.mean())
-print(avg_EVOC.mean())
-print(avg_EPM.mean())
-print(u'CA模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f km/h,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
+
+#print(np.mean(avg_MOE, axis=0))
+print(avg_NFR1.mean())
+print(avg_ECO1.mean())
+print(avg_ENO1.mean())
+print(avg_EVOC1.mean())
+print(avg_EPM1.mean())
+print(u'CA模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 
 
 #设置图片尺寸
 plt.figure(figsize=(6, 4), facecolor='w')
+
 for i in range(n):
     plty = Xlist[:, i]
     pltx = np.arange(0, times+1)
@@ -174,6 +178,7 @@ for i in range(n):
         plt.scatter(pltx/10, plty/100, marker='o', c="red", s=0.1, alpha=1, linewidths=0.2)
     else:
         plt.scatter(pltx / 10, plty / 100, marker='o', c="green", s=0.1, alpha=1, linewidths=0.2)
+
 
 # 画图展示
 plt.xlim(0, times*step)
