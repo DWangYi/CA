@@ -16,7 +16,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 path = 100000.0   # 元胞总数
 #n = 10         # 车辆数目
 ltv = 3500      # 最大限速
-p = 0.2         # 随机减速概率
+p = 0.15         # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
 #PER = 1.0       # 网联车渗透率
@@ -36,7 +36,7 @@ ENOList = np.zeros((10, 11))  #记录每个饱和度、密度对应NO排放
 EVOCList = np.zeros((10, 11))  #记录每个饱和度、密度对应VOC排放
 EPMList = np.zeros((10, 11))  #记录每个饱和度、密度对应PM排放
 
-M = 10          # 随机次数
+M = 15          # 随机次数
 
 
 
