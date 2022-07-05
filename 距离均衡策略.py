@@ -15,10 +15,10 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 path = 100000.0   # 元胞总数
 n = 40       # 车辆数目
 ltv = 3500      # 最大限速
-p = 0.2        # 随机减速概率
+p = 0.15        # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.03      # 网联车渗透率
+PER = 0.5      # 网联车渗透率
 RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
@@ -48,7 +48,7 @@ def d_safe(v1,v2):
 ##FollowerStopper策略速度生成函数
 def FSC(v, v1, dis, U):
     delta_x10 = 4.5; delta_x20 = 5.25; delta_x30 = 6.0
-    d1 = 3.0; d2 = 1.0; d3 = 0.5
+    d1 = 1.5; d2 = 1.0; d3 = 0.5
     delta_x1 = delta_x10 + (min(v1-v, 0) ** 2) / (2.0 * d1)
     delta_x2 = delta_x20 + (min(v1-v, 0) ** 2) / (2.0 * d2)
     delta_x3 = delta_x30 + (min(v1-v, 0) ** 2) / (2.0 * d3)
@@ -61,6 +61,11 @@ def FSC(v, v1, dis, U):
     else:
         v_cmd = U
     return v_cmd
+
+def DBP(v1, v2, dis1, dis2, deltaT):          #v1为t时刻车辆n-1速度；v2为t时刻车辆n+1速度；dis1为车辆n与车辆n-1的距离；dis2为车辆n+1与车辆n的距离
+    return 0.5*(v1+v2-((dis1-dis2)/deltaT))
+
+
 
 
 for m in range(M):
@@ -103,60 +108,56 @@ for m in range(M):
     for t in range(times):  # 遍历每个时刻
         for i in range(n): # 遍历每辆车
             mat = matlist[i]  # 确定车辆类型
-            # 计算当前车与前车的距离以及安全距离，注意是环形车道，i的前车为i-1
+            # 计算当前车n与前车n-1的距离以及安全距离，注意是环形车道，i的前车为i-1
             if x[i] > x[i-1]:
                 d = path - x[i] + x[i-1] - cl
-                ds = d_safe(v[i],v[i-1])  #计算当前车当前速度下的对应安全距离
+                ds = d_safe(v[i], v[i-1])  #计算当前车当前速度下的对应安全距离
             else:
                 d = x[i-1] - x[i] - cl
                 ds = d_safe(v[i], v[i-1])  #计算当前车当前速度下的对应安全距离
+
+            # 计算n与n+1的距离以及安全距离，注意是环形车道，i的前车为i-1
+            if i<39:
+                if x[i+1] > x[i]:
+                    d1 = path - x[i+1] + x[i] - cl
+                else:
+                    d1 = x[i] - x[i+1] - cl
+            else:
+                if x[0] > x[i]:
+                    d1 = path - x[0] + x[i] - cl
+                else:
+                    d1 = x[i] - x[0] - cl
+
+
             #根据车辆跟车类型、当前速度、前车距离进行加速、减速、随机慢化
             if mat[0] == 1 :  #车辆为 HV
                 if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
                    v1[i] = min(v[i]+Ac*step, ltv, d)
                 else:
-                    v1[i] = max(0, min(v[i]-De*step, d))
+                    v1[i] = max(0, min(v[i], d))
                 #随机慢化
                 if t%(RT_HV/step) == 0:
                     ran = np.random.random()
-                    if (ran <= p) : #& (SDM[i][t-1] == 0)
+                    if (ran <= p) :
                         SDM[i][t] = 1
                         v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
                 else:
                     SDM[i][t] = SDM[i][t-1]
-                    v1[i] = max(0, max(v1[i] - SDM[i][t] * De * step, 0))
-                    '''
-                    if SDM[i][t] == 1:
-                        v1[i] = min(max(v[i] - SDM[i][t] * De * step, 0), d)
-                    else:
-                        v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
-                    '''
-
-
+                    v1[i] = max(0, min(v1[i] - SDM[i][t] * De * step, d))
             elif mat[1] == 1:   #车辆为 AV
-                v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100*1.2)*100
-                #v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, 8.57) * 100
-                a = v_cmd - v[i]
-                if a>300:
-                    a = 300
-                elif a<-300:
-                    a = -300
-                v1[i] = max(0, min(v[i] + a * step, ltv, d ))
+                #v_cmd = DBP(v[i-1], v[i+1],  DMtx[t][i], DMtx[t][i+1], step)
+                v_cmd = DBP(v[i - 1], v[i + 1], d, d+1, step)
+                v1[i] = max(0, min(v_cmd, ltv, d))
+                #v1[i] = v_cmd
             else:      #车辆为 CAV
                 if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
                 else:
                     v1[i] = v1[i - 1]
-                '''
-                v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean()/100) * 100
-                a = v_cmd - v[i]
-                v1[i] = v[i] + a * step
-                '''
-
             DSafeMtx[t][i] = ds
             DMtx[t][i] = d
-        #norm = matplotlib.colors.Normalize(vmin=0, vmax=3500)
-        #plt.scatter([t/10]*n, x/100, marker='o', s=0.1, alpha=1,linewidths=0.2, c=v, cmap='jet_r', norm=norm)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
+        # norm = matplotlib.colors.Normalize(vmin=0, vmax=300)
+        # plt.scatter([t/10]*n, x/100, marker='o', s=0.1, alpha=1,linewidths=0.2, c=v, cmap='jet_r', norm=norm)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
 
         #保存每个时刻的每辆车的位置、速度数据；对位置数据和速度数据进行更新
         Xlist = np.vstack((Xlist, (x + v1*step)%(path)))
@@ -190,12 +191,12 @@ for m in range(M):
 
 
 print(np.mean(avg_MOE, axis=0))
-print(avg_NFR.mean())
+print(avg_NFR1.mean())
 print(avg_ECO1.mean())
 print(avg_ENO1.mean())
 print(avg_EVOC1.mean())
 print(avg_EPM1.mean())
-print(u'FSC模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
+print(u'距离均衡模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
 
 
 
@@ -215,9 +216,9 @@ plt.xlim(0, times*step)
 plt.ylim(0, path/100)
 plt.ylabel(u'Position(meters)')
 plt.xlabel(u'Time(sec.)')
-#cbar = plt.colorbar()
-#cbar.set_label('Velocity(m/s)')
-#plt.clim(0, 35)
+cbar = plt.colorbar()
+cbar.set_label('Velocity(m/s)')
+plt.clim(0, 3)
 #plt.colorbar()
-plt.savefig(u'FSC轨迹模拟(密度%d,车辆数%d,渗透率%s,减速概率%s).png' % (round(n/(path/100000), 2), n, PER, p), dpi=600)
+plt.savefig(u'距离均衡轨迹模拟(密度%d,车辆数%d,渗透率%s,减速概率%s).png' % (round(n/(path/100000), 2), n, PER, p), dpi=600)
 plt.show()
