@@ -18,19 +18,20 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 path = 100000   # 元胞总数
 n = 60        # 车辆数目
 ltv = 3500      # 最大限速
-p = 0.15       # 随机减速概率
+p0 = 0.06        # 随机减速概率(速度不为0)
+p1 = 0.40        # 随机减速概率2(速度等于0)
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.5       # 网联车渗透率
+PER = 0.0        # 网联车渗透率
 RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 RT_CAV = 0.1      # CAV车辆反应时间
-Ac = 200        # 车辆一般加速度 2 m2/s
-De = 300         # 车辆一般减速度  3 m2/s
+Ac = 100        # 车辆一般加速度 2 m2/s
+De = 200         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 10          # 随机次数
+M = 5          # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -76,7 +77,7 @@ for m in range(M):
     x = np.round(np.linspace(path, 0, n, endpoint=False))
     Xlist = x.copy()   # Xlist作为每个时刻车辆位置的矩阵
     # 初始化速度，v保存每辆车当前时刻的速度，按正态分布进行速度初始化，按截断正态分布进行生成
-    v=np.random.randint(0.49*ltv, 0.5*ltv, [n])
+    v=np.random.randint(0.40*ltv, 0.5*ltv, [n])
     #v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
     v1 = v.copy()      #v1作为下一时刻速度更新容器
     Vlist = v.copy()   # Vlist作为每个时刻车辆速度的矩阵
@@ -103,18 +104,30 @@ for m in range(M):
             #根据车辆跟车类型、当前速度、前车距离进行加速、减速、随机慢化
             if mat[0] == 1:  #车辆为HV
                 if d > ds:    #当前车与前车之间的距离大于安全距离，车辆将加速
-                    v1[i] = min(v[i]+Ac*step, ltv, d)
+                    v1[i] = min(v[i]+Ac*step, ltv, d+max(v[i-1]-De,0))
                 else:
-                    v1[i] = max(0, min(v[i], d))
+                    v1[i] = max(0, min(v[i], d+max(v[i-1]-De,0)))
                 #随机慢化
                 if t%(RT_HV/step) == 0:
                     ran = np.random.random()
+                    if (v[i]>0) :
+                        p = p0
+                    else:
+                        p = p1
                     if (ran <= p) :
                         SDM[i][t] = 1
-                        v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                        v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d+max(v[i-1]-De,0))
                 else:
                     SDM[i][t] = SDM[i][t-1]
-                    v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                    v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d+max(v[i-1]-De,0))
+
+                # ran = np.random.random()
+                # if (v[i] > 0):
+                #     p = p0
+                # else:
+                #     p = p1
+                # if (ran < p):
+                #     v1[i] = min(max(v1[i] - De * step, 0), d)
             elif mat[1] == 1:   #车辆为 AV
                 if d > ds:  #当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = max(0, min(v[i] + Ac * step, ltv, d))

@@ -13,12 +13,12 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 #参数设置说明
 ##环形车道长度400米，每个元胞0.01米，仿真时间200秒，仿真步长0.1秒。
 path = 100000.0   # 元胞总数
-n = 60       # 车辆数目
+n = 60      # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.15        # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.2      # 网联车渗透率
+PER = 0.5      # 网联车渗透率
 RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
@@ -26,7 +26,7 @@ De = 300         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 20         # 随机次数
+M = 10         # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -128,16 +128,20 @@ for m in range(M):
             elif mat[1] == 1:   #车辆为 AV
                 v_cmd = FSC(v[i]/100, v[i-1]/100, d/100, Vlist.mean()/100)*100
                 a = v_cmd - v[i]
-                v1[i] = max(0, min(v[i] + a * step, ltv, d))
+                # v1[i] = max(0, min(v[i] + a * step, ltv, d))
+                v1[i] = v_cmd
             else:      #车辆为 CAV
                 if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
                 else:
                     v1[i] = v1[i - 1]
+                # v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean() / 100) * 100
+                # a = v_cmd - v[i]
+                # v1[i] = v_cmd
             DSafeMtx[t][i] = ds
             DMtx[t][i] = d
-        #norm = matplotlib.colors.Normalize(vmin=0, vmax=3500)
-        #plt.scatter([t/10]*n, x/100, marker='o', s=0.1, alpha=1,linewidths=0.2, c=v, cmap='jet_r', norm=norm)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
+        # norm = matplotlib.colors.Normalize(vmin=0, vmax=300)
+        # plt.scatter([t/10]*n, x/100, marker='o', s=0.1, alpha=1,linewidths=0.2, c=v, cmap='jet_r', norm=norm)  #在图上绘制该时刻所有车辆的位置,横轴为t,纵轴为x
 
         #保存每个时刻的每辆车的位置、速度数据；对位置数据和速度数据进行更新
         Xlist = np.vstack((Xlist, (x + v1*step)%(path)))
@@ -196,9 +200,9 @@ plt.xlim(0, times*step)
 plt.ylim(0, path/100)
 plt.ylabel(u'Position(meters)')
 plt.xlabel(u'Time(sec.)')
-#cbar = plt.colorbar()
-#cbar.set_label('Velocity(m/s)')
-#plt.clim(0, 35)
+cbar = plt.colorbar()
+cbar.set_label('Velocity(m/s)')
+plt.clim(0, 3)
 #plt.colorbar()
 plt.savefig(u'FSC轨迹模拟(密度%d,车辆数%d,渗透率%s,减速概率%s).png' % (round(n/(path/100000), 2), n, PER, p), dpi=600)
 plt.show()

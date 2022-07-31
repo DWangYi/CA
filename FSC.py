@@ -203,14 +203,14 @@ ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%
 ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-flowdata.to_csv('FlowData-FSC.csv')
-vdata.to_csv('VData-FSC.csv')
-std_vdata.to_csv('Std_VData-FSC.csv')
-NFRdata.to_csv('NFRData-FSC.csv')
-ECOdata.to_csv('ECOData-FSC.csv')
-ENOdata.to_csv('ENOData-FSC.csv')
-EVOCdata.to_csv('EVOCData-FSC.csv')
-EPMdata.to_csv('EPMData-FSC.csv')
+flowdata.to_csv('./data/FlowData-FSC.csv')
+vdata.to_csv('./data/VData-FSC.csv')
+std_vdata.to_csv('./data/Std_VData-FSC.csv')
+NFRdata.to_csv('./data/NFRData-FSC.csv')
+ECOdata.to_csv('./data/ECOData-FSC.csv')
+ENOdata.to_csv('./data/ENOData-FSC.csv')
+EVOCdata.to_csv('./data/EVOCData-FSC.csv')
+EPMdata.to_csv('./data/EPMData-FSC.csv')
 
 
 '''

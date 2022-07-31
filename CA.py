@@ -210,14 +210,14 @@ ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%
 ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-flowdata.to_csv('FlowData-CA.csv')
-vdata.to_csv('VData-CA.csv')
-std_vdata.to_csv('Std_VData-CA.csv')
-NFRdata.to_csv('NFRData-CA.csv')
-ECOdata.to_csv('ECOData-CA.csv')
-ENOdata.to_csv('ENOData-CA.csv')
-EVOCdata.to_csv('EVOCData-CA.csv')
-EPMdata.to_csv('EPMData-CA.csv')
+flowdata.to_csv('./data/FlowData-CA.csv')
+vdata.to_csv('./data/VData-CA.csv')
+std_vdata.to_csv('./data/Std_VData-CA.csv')
+NFRdata.to_csv('./data/FRData-CA.csv')
+ECOdata.to_csv('./data/ECOData-CA.csv')
+ENOdata.to_csv('./data/ENOData-CA.csv')
+EVOCdata.to_csv('./data/EVOCData-CA.csv')
+EPMdata.to_csv('./data/EPMData-CA.csv')
 
 
 '''
