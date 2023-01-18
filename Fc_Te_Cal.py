@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 #np.seterr(divide='ignore',invalid='ignore')
 
 def FcTeCal(Vmtx, Amtx, step):
@@ -33,12 +34,18 @@ def FcTeCal(Vmtx, Amtx, step):
         reslist[k] = np.exp(MOE)
     return reslist
 
+def NFR_cal(vsp):
+    if vsp > 0:
+        return 1.71 * (vsp**0.42) * 0.1
+    else:
+        return 1 * 0.1
+
 
 def FMCal_VSP(Vmtx, Amtx, step):
     Vmtx = np.array(Vmtx) / 100.0
-    Amtx = np.abs(np.array(Amtx) / 100.0)
-    VSP = (Vmtx * (1.1*Amtx + 0.132) + 0.000302*(Vmtx**3))
-    NFR = 1.71 * (VSP**0.42) * step
+    Amtx = np.array(Amtx) / 100.0
+    VSP = Vmtx * (1.1*Amtx + 0.132) + 0.000302*(Vmtx**3)
+    NFR = np.vectorize(NFR_cal)(VSP)
     avgNFR = NFR.mean()*10
     return avgNFR
 

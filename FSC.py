@@ -15,27 +15,28 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 #参数设置说明
 path = 100000.0   # 元胞总数
-#n = 10         # 车辆数目
 ltv = 3500      # 最大限速
 p = 0.15         # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-#PER = 1.0       # 网联车渗透率
 RT_HV = 2      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
-De = 300         # 车辆一般减速度  3 m2/s
+De1 = 200         # 车辆一般减速度  3 m2/s
+De2 = 250         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-avg_VList = np.zeros((10, 11))
-std_VList = np.zeros((10, 11))
-flowList = np.zeros((10, 11))
-NFRList = np.zeros((10, 11))  #记录每个饱和度、密度对应油耗
-ECOList = np.zeros((10, 11))  #记录每个饱和度、密度对应CO2排放
-ENOList = np.zeros((10, 11))  #记录每个饱和度、密度对应NO排放
-EVOCList = np.zeros((10, 11))  #记录每个饱和度、密度对应VOC排放
-EPMList = np.zeros((10, 11))  #记录每个饱和度、密度对应PM排放
+avg_VList = np.zeros((20, 11))
+std_VList = np.zeros((20, 11))
+avg_CVList = np.zeros((20, 11))  #记录每个饱和度、密度对应平均速度变异系数
+avg_CRList = np.zeros((20, 11))  #记录每个饱和度、密度对应拥堵比例
+flowList = np.zeros((20, 11))
+NFRList = np.zeros((20, 11))  #记录每个饱和度、密度对应油耗
+ECOList = np.zeros((20, 11))  #记录每个饱和度、密度对应CO2排放
+ENOList = np.zeros((20, 11))  #记录每个饱和度、密度对应NO排放
+EVOCList = np.zeros((20, 11))  #记录每个饱和度、密度对应VOC排放
+EPMList = np.zeros((20, 11))  #记录每个饱和度、密度对应PM排放
 
 M = 15          # 随机次数
 
@@ -69,11 +70,13 @@ def FSC(v, delta_v, dis, U):
 
 for per in range(0,11,1):   #遍历不同的渗透率
     PER = per * 0.1
-    for u in range(10,101,10):  #遍历不同的密度
+    for u in range(5,101,5):  #遍历不同的密度
         n = u
         print(u'渗透率%.2f ,密度%.2f' % (PER, n))
         avg_V = np.zeros(M)  # 记录每个随机过程中的速度平均值
         std_V = np.zeros(M)  # 记录每个随机过程中的速度标准差
+        avg_CV = np.zeros(M)  # 记录每个随机过程中的速度变异系数
+        avg_CR = np.zeros(M)  # 记录每个随机过程中的拥堵比例
         avg_F = np.zeros(M)  # 记录每个随机过程中的流量平均值
         avg_NFR = np.zeros(M)  # 记录每个随机过程中的油耗
         avg_ECO = np.zeros(M)  # 记录每个随机过程中的CO2排放
@@ -101,7 +104,7 @@ for per in range(0,11,1):   #遍历不同的渗透率
             x = np.round(np.linspace(path, 0, n, endpoint=False))
             Xlist = x.copy()   # Xlist作为每个时刻车辆位置的矩阵
             # 初始化速度，v保存每辆车当前时刻的速度，按正态分布进行速度初始化，按截断正态分布进行生成
-            v=np.random.randint(0.49*ltv, 0.5*ltv, [n])
+            v=np.random.randint(0.99*ltv, 1.0*ltv, [n])
             #v[-1] = ltv       #当渗透率为100%时，将头车的速度设置为最大速度
             v1 = v.copy()      #v1作为下一时刻速度更新容器
             Vlist = v.copy()   # Vlist作为每个时刻车辆速度的矩阵
@@ -135,12 +138,18 @@ for per in range(0,11,1):   #遍历不同的渗透率
                             ran = np.random.random()
                             if (ran <= p):
                                 SDM[i][t] = 1
-                                v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                                if v[i] < v[i - 1]:
+                                    v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                                else:
+                                    v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
                         else:
                             SDM[i][t] = SDM[i][t - 1]
-                            v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                            if v[i] < v[i - 1]:
+                                v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                            else:
+                                v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
                     elif mat[1] == 1:   #车辆为 AV
-                        v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean() / 100*1.2) * 100
+                        v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean() / 100) * 100
                         a = v_cmd - v[i]
                         v1[i] = max(0, min(v[i] + a * step, ltv, d))
                     else:      #车辆为 CAV
@@ -148,6 +157,9 @@ for per in range(0,11,1):   #遍历不同的渗透率
                             v1[i] = min(v[i] + Ac * step, ltv, d + v1[i - 1] - ds)
                         else:
                             v1[i] = v1[i - 1]
+                        # v_cmd = FSC(v[i] / 100, v[i - 1] / 100, d / 100, Vlist.mean() / 100) * 100
+                        # a = v_cmd - v[i]
+                        # v1[i] = max(0, min(v[i] + a * step, ltv, d))
                     DSafeMtx[t][i] = ds
                     DMtx[t][i] = d
                 #保存每个时刻的每辆车的位置、速度数据；对位置数据和速度数据进行更新
@@ -160,30 +172,37 @@ for per in range(0,11,1):   #遍历不同的渗透率
                 x = (x + v1*step)%(path-1)     #更新位置
                 v = v1.copy()        #更新速度
 
-            #指标  计算100秒以后的指标
-            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
-            std_V[m] = np.std(Vlist[1000:, :]) / 100.0 
+            #指标  计算100秒以后的运行指标
+            avg_V[m] = np.mean(Vlist[1000:-1, :], axis=0).mean() / 100.0
+            std_V[m] = np.std(Vlist[1000:-1, :]) / 100.0
+            avg_CV[m] =  std_V[m] / avg_V[m]
+            avg_CR[m] = np.sum(Vlist[1000:-1, :] < 300) / np.sum(Vlist[1000:-1, :] > -1000)
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
-
             # 计算油耗、排放指标
             Alist = np.diff(Vlist[:], axis=0) / step
-            avg_NFR[m] = FMCal_VSP(Vlist[:-1], Alist, step)
-            avg_ECO[m] = EMCal_CO(Vlist[:-1], Alist, step)
-            avg_ENO[m] = EMCal_NO(Vlist[:-1], Alist, step)
-            avg_EVOC[m] = EMCal_VOC(Vlist[:-1], Alist, step)
-            avg_EPM[m] = EMCal_PM(Vlist[:-1], Alist, step)
-
-            avg_NFR1 = 1000.0 / avg_V.mean() * avg_NFR
-            avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
-            avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
-            avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
-            avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+            avg_NFR[m] = FMCal_VSP(Vlist[1000:-1], Alist[1000:], step)
+            avg_ECO[m] = EMCal_CO(Vlist[1000:-1], Alist[1000:], step)
+            avg_ENO[m] = EMCal_NO(Vlist[1000:-1], Alist[1000:], step)
+            avg_EVOC[m] = EMCal_VOC(Vlist[1000:-1], Alist[1000:], step)
+            avg_EPM[m] = EMCal_PM(Vlist[1000:-1], Alist[1000:], step)
+            # 计算安全指标
 
 
-        j = int(u/10) - 1
+
+
+        avg_NFR1 = 1000.0 / avg_V.mean() * avg_NFR
+        avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
+        avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
+        avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
+        avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+
+
+        j = int(u/5) - 1
         k = int(per/1)
         avg_VList[j, k] = round(avg_V.mean(), 2)
         std_VList[j, k] = round(std_V.mean(), 2)
+        avg_CVList[j, k] = round(avg_CV.mean(), 2)
+        avg_CRList[j, k] = round(avg_CR.mean(), 2)
         flowList[j, k] = round(avg_F.mean(), 2)
         NFRList[j, k] = round(avg_NFR1.mean(), 5)
         ECOList[j, k] = round(avg_ECO1.mean(), 5)
@@ -191,26 +210,39 @@ for per in range(0,11,1):   #遍历不同的渗透率
         EVOCList[j, k] = round(avg_EVOC1.mean(), 5)
         EPMList[j, k] = round(avg_EPM1.mean(), 5)
 
-        #print(u'平均速度%.2f km/h,流量%.2f veh/s' % (avg_V/100.0*3.6, max(round(flow-n, 0), 0)))
 
-    #plt.plot(np.arange(2,74,2)*2.5, flowList[:, k], marker=marklist[int(per/2)], markersize=2, linewidth=1)
+flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+avg_cvdata = pd.DataFrame(avg_CVList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+avg_crdata = pd.DataFrame(avg_CRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
+EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(5,101,5))
 
-flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-EVOCdata = pd.DataFrame(EVOCList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
-flowdata.to_csv('./data/FlowData-FSC.csv')
-vdata.to_csv('./data/VData-FSC.csv')
-std_vdata.to_csv('./data/Std_VData-FSC.csv')
-NFRdata.to_csv('./data/NFRData-FSC.csv')
-ECOdata.to_csv('./data/ECOData-FSC.csv')
-ENOdata.to_csv('./data/ENOData-FSC.csv')
-EVOCdata.to_csv('./data/EVOCData-FSC.csv')
-EPMdata.to_csv('./data/EPMData-FSC.csv')
+# flowdata.to_csv('./data-2 2 2.5 5/FlowData-FSC.csv')
+# vdata.to_csv('./data-2 2 2.5 5/VData-FSC.csv')
+# std_vdata.to_csv('./data-2 2 2.5 5/Std_VData-FSC.csv')
+# avg_cvdata.to_csv('./data-2 2 2.5 5/Avg_CVData-FSC.csv')
+# avg_crdata.to_csv('./data-2 2 2.5 5/Avg_CRData-FSC.csv')
+# NFRdata.to_csv('./data-2 2 2.5 5/NFRData-FSC.csv')
+# ECOdata.to_csv('./data-2 2 2.5 5/ECOData-FSC.csv')
+# ENOdata.to_csv('./data-2 2 2.5 5/ENOData-FSC.csv')
+# EVOCdata.to_csv('./data-2 2 2.5 5/EVOCData-FSC.csv')
+# EPMdata.to_csv('./data-2 2 2.5 5/EPMData-FSC.csv')
+
+# flowdata.to_csv('./data/FlowData-FSC-all.csv')
+# vdata.to_csv('./data/VData-FSC-all.csv')
+# std_vdata.to_csv('./data/Std_VData-FSC-all.csv')
+# avg_cvdata.to_csv('./data/Avg_CVData-FSC-all.csv')
+# avg_crdata.to_csv('./data/Avg_CRData-FSC-all.csv')
+# NFRdata.to_csv('./data/NFRData-FSC-all.csv')
+# ECOdata.to_csv('./data/ECOData-FSC-all.csv')
+# ENOdata.to_csv('./data/ENOData-FSC-all.csv')
+# EVOCdata.to_csv('./data/EVOCData-FSC-all.csv')
+# EPMdata.to_csv('./data/EPMData-FSC-all.csv')
 
 
 '''

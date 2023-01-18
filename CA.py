@@ -23,12 +23,15 @@ step = 0.1      #仿真步长
 RT_HV = 2      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
-De = 300         # 车辆一般减速度  3 m2/s
+De1 = 200         # 车辆一般减速度  3 m2/s
+De2 = 250         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
 avg_VList = np.zeros((10, 11))  #记录每个饱和度、密度对应平均速度
 std_VList = np.zeros((10, 11))  #记录每个饱和度、密度对应平均速度标准差
+avg_CVList = np.zeros((10, 11))  #记录每个饱和度、密度对应平均速度变异系数
+avg_CRList = np.zeros((10, 11))  #记录每个饱和度、密度对应拥堵比例
 flowList = np.zeros((10, 11))   #记录每个饱和度、密度对应吞吐量
 NFRList = np.zeros((10, 11))  #记录每个饱和度、密度对应油耗
 ECOList = np.zeros((10, 11))  #记录每个饱和度、密度对应CO2排放
@@ -74,6 +77,8 @@ for per in range(0,11,1):   #遍历不同的渗透率
         print(u'渗透率%.2f ,密度%.2f' % (PER, n))
         avg_V = np.zeros(M)  # 记录每个随机过程中的速度平均值
         std_V = np.zeros(M)  # 记录每个随机过程中的速度标准差
+        avg_CV = np.zeros(M)  # 记录每个随机过程中的速度变异系数
+        avg_CR = np.zeros(M)  # 记录每个随机过程中的拥堵比例
         avg_F = np.zeros(M)  # 记录每个随机过程中的流量平均值
         avg_NFR = np.zeros(M)  # 记录每个随机过程中的油耗
         avg_ECO = np.zeros(M)  # 记录每个随机过程中的CO2排放
@@ -139,10 +144,16 @@ for per in range(0,11,1):   #遍历不同的渗透率
                             ran = np.random.random()
                             if (ran <= p):
                                 SDM[i][t] = 1
-                                v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                                if v[i] < v[i - 1]:
+                                    v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                                else:
+                                    v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
                         else:
                             SDM[i][t] = SDM[i][t - 1]
-                            v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                            if v[i] < v[i - 1]:
+                                v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                            else:
+                                v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
                     elif mat[1] == 1:   #车辆为 AV
                         if d > ds:  # 当前车与前车之间的距离大于安全距离，车辆将加速
                             v1[i] = min(v[i] + Ac * step, ltv, d)
@@ -165,29 +176,36 @@ for per in range(0,11,1):   #遍历不同的渗透率
                 x = (x + v1*step)%(path-1)     #更新位置
                 v = v1.copy()        #更新速度
 
-            #指标  计算100秒以后的指标
-            avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
-            std_V[m] = np.std(Vlist[1000:, :]/100.0)
+            #指标  计算100秒以后的运行指标
+            avg_V[m] = np.mean(Vlist[1000:-1, :], axis=0).mean() / 100.0
+            std_V[m] = np.std(Vlist[1000:-1, :]/100.0)
+            avg_CV[m] =  std_V[m] / avg_V[m]
+            avg_CR[m] = np.sum(Vlist[1000:-1, :]>300)/np.sum(Vlist[1000:-1, :]>-1000)
             avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
             #计算油耗、排放指标
             Alist = np.diff(Vlist[:], axis=0) / step
-            avg_NFR[m] = FMCal_VSP(Vlist[:-1], Alist, step)
-            avg_ECO[m] = EMCal_CO(Vlist[:-1], Alist, step)
-            avg_ENO[m] = EMCal_NO(Vlist[:-1], Alist, step)
-            avg_EVOC[m] = EMCal_VOC(Vlist[:-1], Alist, step)
-            avg_EPM[m] = EMCal_PM(Vlist[:-1], Alist, step)
+            avg_NFR[m] = FMCal_VSP(Vlist[1000:-1], Alist[1000:], step)
+            avg_ECO[m] = EMCal_CO(Vlist[1000:-1], Alist[1000:], step)
+            avg_ENO[m] = EMCal_NO(Vlist[1000:-1], Alist[1000:], step)
+            avg_EVOC[m] = EMCal_VOC(Vlist[1000:-1], Alist[1000:], step)
+            avg_EPM[m] = EMCal_PM(Vlist[1000:-1], Alist[1000:], step)
+            # 计算安全指标
 
-            avg_NFR1 = 1000.0 / avg_V.mean() * avg_NFR
-            avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
-            avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
-            avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
-            avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+
+
+        avg_NFR1 = 1000.0 / avg_V * avg_NFR
+        avg_ECO1 = 1000.0 / avg_V * avg_ECO
+        avg_ENO1 = 1000.0 / avg_V * avg_ENO
+        avg_EVOC1 = 1000.0 / avg_V * avg_EVOC
+        avg_EPM1 = 1000.0 / avg_V * avg_EPM
 
 
         j = int(u/10) - 1
         k = int(per/1)
         avg_VList[j, k] = round(avg_V.mean(), 2)
         std_VList[j, k] = round(std_V.mean(), 2)
+        avg_CVList[j, k] = round(avg_CV.mean(), 2)
+        avg_CRList[j, k] = round(avg_CR.mean(), 2)
         flowList[j, k] = round(avg_F.mean(), 2)
         NFRList[j, k] = round(avg_NFR1.mean(), 5)
         ECOList[j, k] = round(avg_ECO1.mean(), 5)
@@ -205,6 +223,8 @@ for per in range(0,11,1):   #遍历不同的渗透率
 flowdata = pd.DataFrame(flowList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 vdata = pd.DataFrame(avg_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 std_vdata = pd.DataFrame(std_VList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+avg_cvdata = pd.DataFrame(avg_CVList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
+avg_crdata = pd.DataFrame(avg_CRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 NFRdata = pd.DataFrame(NFRList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 ECOdata = pd.DataFrame(ECOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
 ENOdata = pd.DataFrame(ENOList, columns=['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'], index=np.arange(10,101,10))
@@ -213,7 +233,9 @@ EPMdata = pd.DataFrame(EPMList, columns=['0%','10%','20%','30%','40%','50%','60%
 flowdata.to_csv('./data/FlowData-CA.csv')
 vdata.to_csv('./data/VData-CA.csv')
 std_vdata.to_csv('./data/Std_VData-CA.csv')
-NFRdata.to_csv('./data/FRData-CA.csv')
+avg_cvdata.to_csv('./data/Avg_CVData-CA.csv')
+avg_crdata.to_csv('./data/Avg_CRData-CA.csv')
+NFRdata.to_csv('./data/NFRData-CA.csv')
 ECOdata.to_csv('./data/ECOData-CA.csv')
 ENOdata.to_csv('./data/ENOData-CA.csv')
 EVOCdata.to_csv('./data/EVOCData-CA.csv')

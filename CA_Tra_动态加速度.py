@@ -16,21 +16,22 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 #参数设置说明
 ##环形车道长度400米，每个元胞0.01米，仿真时间200秒，仿真步长0.1秒。
 path = 100000   # 元胞总数
-n = 60        # 车辆数目
+n = 90        # 车辆数目
 ltv = 3500      # 最大限速
-p = 0.2       # 随机减速概率
+p = 0.15       # 随机减速概率
 times = 4000    # 模拟的时刻数目
 step = 0.1      #仿真步长
-PER = 0.0       # 网联车渗透率
+PER = 0.6       # 网联车渗透率
 RT_HV = 2.0      #人工车辆反应时间
 RT_AV = 0.6      # AV车辆反应时间
 RT_CAV = 0.1      # CAV车辆反应时间
 Ac = 200        # 车辆一般加速度 2 m2/s
-De = 200         # 车辆一般减速度  3 m2/s
+De1 = 200         # 车辆一般减速度  3 m2/s
+De2 = 250         # 车辆一般减速度  3 m2/s
 DE = 500         # 车辆最大减速度  5 m2/s
 cl = 500        # 车辆车身长度     5米
 ds_cav = 50     # CAV车辆安全距离 定义为常数  0.5米
-M = 1        # 随机次数
+M = 3        # 随机次数
 avg_V = np.zeros(M) #记录每个随机过程中的速度平均值
 std_V = np.zeros(M) #记录每个随机过程中的速度标准差
 avg_F = np.zeros(M) #记录每个随机过程中的流量平均值
@@ -119,12 +120,17 @@ for m in range(M):
                     if (ran <= p) :
                         SDM[i][t] = 1
                         #v1[i] = min(max(v1[i] - SDM[i][t] * dym_De(v1[i], DE, ltv) * step, 0), d)
-                        if v[i] > v[i-1]:
-                            v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                        if v[i] < v[i-1]:
+                            v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                        else:
+                            v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
                 else:
                     SDM[i][t] = SDM[i][t-1]
                     #v1[i] = min(max(v1[i] - SDM[i][t] * dym_De(v1[i], DE, ltv) * step, 0), d)
-                    v1[i] = min(max(v1[i] - SDM[i][t] * De * step, 0), d)
+                    if v[i] < v[i - 1]:
+                        v1[i] = min(max(v1[i] - SDM[i][t] * De2 * step, 0), d)
+                    else:
+                        v1[i] = min(max(v1[i] - SDM[i][t] * De1 * step, 0), d)
             elif mat[1] == 1:   #车辆为 AV
                 if d > ds:  #当前车与前车之间的距离大于安全距离，车辆将加速
                     v1[i] = max(0, min(v[i] + Ac * step, ltv, d))
@@ -152,11 +158,12 @@ for m in range(M):
 
     #指标 计算100秒以后的指标
     ##平均速度
-    avg_V[m] = np.mean(Vlist[1000:, :], axis=0).mean() / 100.0
-    std_V[m] = np.std(Vlist[1000:, :] / 100.0)
+    avg_V[m] = np.mean(Vlist[1000:-1, :], axis=0).mean() / 100.0
+    std_V[m] = np.std(Vlist[1000:-1, :] / 100.0)
     avg_F[m] = max(round(flow_count / (times * step) * 3600, 0), 0)
     Vlistout = pd.DataFrame(Vlist)
     Vlistout.to_csv('Vlistout.csv')
+
 
     Alist = np.diff(Vlist[:], axis=0) / step
     #avg_MOE[m] = FcTeCal(Vlist[1000:-1], Alist[1000:], step)
@@ -166,11 +173,13 @@ for m in range(M):
     avg_EVOC[m] = EMCal_VOC(Vlist[1000:-1], Alist[1000:], step)
     avg_EPM[m] = EMCal_PM(Vlist[1000:-1], Alist[1000:], step)
 
-    avg_NFR1 = 1000.0/avg_V.mean()*avg_NFR
-    avg_ECO1 = 1000.0 / avg_V.mean() * avg_ECO
-    avg_ENO1 = 1000.0 / avg_V.mean() * avg_ENO
-    avg_EVOC1 = 1000.0 / avg_V.mean() * avg_EVOC
-    avg_EPM1 = 1000.0 / avg_V.mean() * avg_EPM
+
+
+avg_NFR1 = 1000.0/avg_V*avg_NFR
+avg_ECO1 = 1000.0/avg_V*avg_ECO
+avg_ENO1 = 1000.0/avg_V*avg_ENO
+avg_EVOC1 = 1000.0/avg_V*avg_EVOC
+avg_EPM1 = 1000.0/avg_V*avg_EPM
 
 
 
@@ -181,7 +190,7 @@ print(avg_ECO1.mean())
 print(avg_ENO1.mean())
 print(avg_EVOC1.mean())
 print(avg_EPM1.mean())
-print(u'CA模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()))
+print(u'CA模拟,车辆%.0f辆,渗透率%.2f,平均速度%.2f m/s,流量%.2f veh/s,平均速度标准差%.2f' % (n, PER, avg_V.mean(), avg_F.mean(), std_V.mean()/avg_V.mean()))
 
 
 

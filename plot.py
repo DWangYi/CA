@@ -25,7 +25,7 @@ Std_FSC = pd.read_csv('./data/Std_VData-FSC.csv', sep=',', index_col=0)
 Flow_CA = pd.read_csv('./data/FlowData-CA.csv', sep=',', index_col=0)
 Flow_FSC = pd.read_csv('./data/FlowData-FSC.csv', sep=',', index_col=0)
 ##读取油耗
-NFR_CA = pd.read_csv('./data/NFRData-CA.csv', sep=',', index_col=0)
+NFR_CA = pd.read_csv('./data/FRData-CA.csv', sep=',', index_col=0)
 NFR_FSC = pd.read_csv('./data/NFRData-FSC.csv', sep=',', index_col=0)
 ##读取CO
 CO_CA = pd.read_csv('./data/ECOData-CA.csv', sep=',', index_col=0)
@@ -137,8 +137,8 @@ y3 = NFR_FSC.loc[60]
 y4 = NFR_FSC.loc[80]
 y5 = NFR_FSC.loc[100]
 plt.plot(x, y1, c='#2986DB', marker='o', mec='#2986DB', mfc='w', label=u'Density=20veh/km')
-plt.plot(x, y2, c='#3F4756', marker='^', mec='#3F4756', mfc='w', label=u'N=Density=40veh/km')
-plt.plot(x, y3, c='#A3ABBD', marker='D', mec='#A3ABBD', mfc='w', label=u'N=Density=60veh/km')
+plt.plot(x, y2, c='#3F4756', marker='^', mec='#3F4756', mfc='w', label=u'Density=40veh/km')
+plt.plot(x, y3, c='#A3ABBD', marker='D', mec='#A3ABBD', mfc='w', label=u'Density=60veh/km')
 plt.plot(x, y4, c='#D25A7F', marker='s', mec='#D25A7F', mfc='w', label=u'Density=80veh/km')
 plt.plot(x, y5, c='#98224E', marker='v', mec='#98224E', mfc='w', label=u'Density=100veh/km')
 plt.legend() # 让图例生效
@@ -289,7 +289,7 @@ func = interpolate.interp2d(x, y, z, kind='cubic')
 x1 = np.linspace(0,100,100)
 y1 = np.linspace(0,100,100)
 z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-35, vmax=35)
+c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-50, vmax=50)
 plt.colorbar(c, label='Performance Improvement(%)')
 plt.xlabel(u"Percentage of AVs(%)") #X轴标签
 plt.ylabel("Density(veh/km)") #Y轴标签
@@ -297,96 +297,94 @@ plt.ylabel("Density(veh/km)") #Y轴标签
 
 
 
-##绘制污染物排放图
-###两种策略CO排放对比热力图
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,0:100:11j]
-z = np.flip(np.array(CO_FSC),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.rainbow, vmin=100, vmax=1500)
-plt.colorbar(c, label='CO2 Emissions(g/km)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
+# ##绘制污染物排放图
+# ###两种策略CO排放对比热力图
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,0:100:11j]
+# z = np.flip(np.array(CO_FSC),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.rainbow, vmin=100, vmax=1500)
+# plt.colorbar(c, label='CO2 Emissions(g/km)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
+#
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,0:100:11j]
+# z = np.flip(np.array(CO_CA),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.rainbow, vmin=100, vmax=1500)
+# plt.colorbar(c, label='CO2 Emissions(g/km)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
+#
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,10:100:10j]
+# z = np.flip(np.array(CO_res1),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
+# plt.colorbar(c, label='Performance Improvement(%)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
 
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,0:100:11j]
-z = np.flip(np.array(CO_CA),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.rainbow, vmin=100, vmax=1500)
-plt.colorbar(c, label='CO2 Emissions(g/km)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
+# ###两种策略NO排放对比热力图
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,10:100:10j]
+# z = np.flip(np.array(NO_res1),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
+# plt.colorbar(c, label='Performance Improvement(%)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
+#
+# ###两种策略PM排放对比热力图
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,10:100:10j]
+# z = np.flip(np.array(PM_res1),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
+# plt.colorbar(c, label='Performance Improvement(%)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
 
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,10:100:10j]
-z = np.flip(np.array(CO_res1),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
-plt.colorbar(c, label='Performance Improvement(%)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
-
-###两种策略NO排放对比热力图
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,10:100:10j]
-z = np.flip(np.array(NO_res1),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
-plt.colorbar(c, label='Performance Improvement(%)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
-
-###两种策略PM排放对比热力图
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,10:100:10j]
-z = np.flip(np.array(PM_res1),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
-plt.colorbar(c, label='Performance Improvement(%)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
-
-###两种策略VOC排放对比热力图
-plt.figure(figsize=(5, 5), facecolor='w')
-y,x = np.ogrid[10:100:10j,10:100:10j]
-z = np.flip(np.array(VOC_res1),axis=0)
-extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
-ax = plt.subplot(111)
-func = interpolate.interp2d(x, y, z, kind='cubic')
-x1 = np.linspace(0,100,100)
-y1 = np.linspace(0,100,100)
-z1 = func(x1,y1)
-c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
-plt.colorbar(c, label='Performance Improvement(%)')
-plt.xlabel(u"Percentage of AVs(%)") #X轴标签
-plt.ylabel("Density(veh/km)") #Y轴标签
-
-
+# ###两种策略VOC排放对比热力图
+# plt.figure(figsize=(5, 5), facecolor='w')
+# y,x = np.ogrid[10:100:10j,10:100:10j]
+# z = np.flip(np.array(VOC_res1),axis=0)
+# extent = [np.min(x),np.max(x),np.min(0),np.max(y)]
+# ax = plt.subplot(111)
+# func = interpolate.interp2d(x, y, z, kind='cubic')
+# x1 = np.linspace(0,100,100)
+# y1 = np.linspace(0,100,100)
+# z1 = func(x1,y1)
+# c = ax.imshow(z1, extent=extent, cmap=cm.coolwarm, vmin=-z1.max(), vmax=z1.max())
+# plt.colorbar(c, label='Performance Improvement(%)')
+# plt.xlabel(u"Percentage of AVs(%)") #X轴标签
+# plt.ylabel("Density(veh/km)") #Y轴标签
 
 
 plt.show()
